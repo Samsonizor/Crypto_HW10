@@ -43,6 +43,7 @@ perm_dict_encrypt = {
     15: 12,
     16: 16,
 }
+
 # permutation dictionary for decryption, an inverse of the dictionary for encryption
 perm_dict_decrypt = {v: k for k, v in perm_dict_encrypt.items()}
 
@@ -51,7 +52,7 @@ def get_keys(master_key: BitArray, num_keys: int):
     Generate keys from the master key using the key scheduling algorithm shown in Stinson
     :param master_key: master keys which the round keys can be generated from
     :param num_keys: the number of round keys needed
-    :return:
+    :return: a list of round keys
     """
     key_list = []
     for i in range(0, num_keys):
@@ -104,33 +105,67 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
         for i in range(1,17):
             output[i-1] = bytes_in[perm_dict_decrypt[i]-1]
     return output
+#
+# rounds = 2+1
+# # master key as given in Stinson
+# K = BitArray('0x8FA507')
+# keys = get_keys(K, rounds)
+# Y = BitArray('0xF5B2')
+# print('y   = 0x' + str(Y.hex))
+# K3 = keys[-1]
+# print('K^3 = ' + str(K3))
+# # key whitening
+# v2 = K3 ^ Y
+#
+# # decryption round 1
+# print('v^2 = ' + str(v2))
+# u2 = substitute_two_bytes(v2, encrypt=False)
+# print('u^2 = ' + str(u2))
+# K2 = keys[-2]
+# print('K^2 = ' + str(K2))
+# w1 = K2 ^ u2
+#
+# # decryption round 2
+# print('w^1 = ' + str(w1))
+# v1 = permute_two_bytes(w1, encrypt=False)
+# print('v^1 = ' + str(v1))
+# u1 = substitute_two_bytes(v1, encrypt=False)
+# print('u^1 = ' + str(u1))
+# K1 = keys[-3]
+# print('K^1 = ' + str(K1))
+# X = K1 ^ u1
+# print('X   = ' + str(X))
 
-rounds = 2+1
-# master key as given in Stinson
+## Test of encryption ##
+# this will attempt to follow strictly agorithm 3.1 of the textbook
+
+num_of_rounds = 2
+X = BitArray('0x3BBC')
 K = BitArray('0x8FA507')
-keys = get_keys(K, rounds)
-Y = BitArray('0xF5B2')
-print('y   = 0x' + str(Y.hex))
-K3 = keys[-1]
-print('K^3 = ' + str(K3))
-# key whitening
-v2 = K3 ^ Y
+w_list = [BitArray()]*(num_of_rounds+1)
+u_list = [BitArray()]*(num_of_rounds+1)
+v_list = [BitArray()]*(num_of_rounds+1)
+w_list[0] = X
+key_array = get_keys(K, num_of_rounds+1)
+# pad the key_array to better fit with the algorithm given
+key_array = [None] + key_array
 
-# decryption round 1
-print('v^2 = ' + str(v2))
-u2 = substitute_two_bytes(v2, encrypt=False)
-print('u^2 = ' + str(u2))
-K2 = keys[-2]
-print('K^2 = ' + str(K2))
-w1 = K2 ^ u2
+for round_number in range(1, num_of_rounds):
+    # perform a series of regular encryption rounds, including round key XOR, substitution, and permutation
 
-# decryption round 2
-print('w^1 = ' + str(w1))
-v1 = permute_two_bytes(w1, encrypt=False)
-print('v^1 = ' + str(v1))
-u1 = substitute_two_bytes(v1, encrypt=False)
-print('u^1 = ' + str(u1))
-K1 = keys[-3]
-print('K^1 = ' + str(K1))
-X = K1 ^ u1
-print('X   = ' + str(X))
+    # XOR step
+    u_list[round_number] = w_list[round_number-1] ^ key_array[round_number]
+    # Substitution step
+    v_list[round_number] = substitute_two_bytes(u_list[round_number], True)
+    # Permutation step
+    w_list[round_number] = permute_two_bytes(v_list[round_number], True)
+
+# final round which excludes permutation
+u_list[num_of_rounds] = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
+v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds-1], True)
+y = v_list[num_of_rounds] ^ key_array[num_of_rounds]
+
+for element in w_list: print(element.bin)
+print(w_list)
+print(v_list)
+print(y)
