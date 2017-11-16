@@ -87,11 +87,9 @@ def substitute_two_bytes(bytes_in: BitArray, encrypt: bool):
         raise(ValueError('Input must be sixteen bits long.'))
 
     output = BitArray()
-    print("bytes_in {0}".format(bytes_in))
 
     for i in range(0, 4):
         output.append(substitute_nibble(bytes_in[i*4:4*(i+1)], encrypt))
-    print("output {0}".format(output))
     return output
 
 def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
@@ -144,8 +142,9 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
 # this will attempt to follow strictly agorithm 3.1 of the textbook
 
 num_of_rounds = 2
-X = BitArray('0x3BBC') #works for B33C -> F5B2
-K = BitArray('0x8FA507')
+X = BitArray('0x3DB3') #works for B33C -> F5B2
+K = BitArray('0x4FE83AF9')
+encrypt = True
 w_list = [BitArray()]*(num_of_rounds+1)
 u_list = [BitArray()]*(num_of_rounds+1)
 v_list = [BitArray()]*(num_of_rounds+1)
@@ -160,13 +159,13 @@ for round_number in range(1, num_of_rounds):
     # XOR step
     u_list[round_number] = w_list[round_number-1] ^ key_array[round_number]
     # Substitution step
-    v_list[round_number] = substitute_two_bytes(u_list[round_number], True)
+    v_list[round_number] = substitute_two_bytes(u_list[round_number], encrypt)
     # Permutation step
-    w_list[round_number] = permute_two_bytes(v_list[round_number], True)
+    w_list[round_number] = permute_two_bytes(v_list[round_number], encrypt)
 
 # final round which excludes permutation
 u_list[num_of_rounds] = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
-v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds], True)
+v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds], encrypt)
 y = v_list[num_of_rounds] ^ key_array[num_of_rounds+1]
 for element in w_list: print(element.bin)
 print(w_list)
