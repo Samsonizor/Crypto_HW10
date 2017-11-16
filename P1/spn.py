@@ -67,9 +67,9 @@ def substitute_nibble(nibble_in: BitArray, encrypt: bool):
     :encrypt: set to True for encryption, False otherwise
     :return: substituted set of four bits
     """
+
     if nibble_in.length != 4:
         raise(ValueError('Input nibble is not four bits long.'))
-
     hex_str = str(nibble_in.hex)
     if(encrypt): return BitArray('0x' + str(sub_dict_encrypt[hex_str]))
     else: return BitArray('0x' + str(sub_dict_decrypt[hex_str]))
@@ -82,12 +82,16 @@ def substitute_two_bytes(bytes_in: BitArray, encrypt: bool):
     :param encrypt: set to True for encryption, False otherwise
     :return: substituted set of two bytes
     """
+
     if bytes_in.length != 16:
         raise(ValueError('Input must be sixteen bits long.'))
 
     output = BitArray()
+    print("bytes_in {0}".format(bytes_in))
+
     for i in range(0, 4):
         output.append(substitute_nibble(bytes_in[i*4:4*(i+1)], encrypt))
+    print("output {0}".format(output))
     return output
 
 def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
@@ -101,7 +105,7 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
     if encrypt:
         for i in range(1,17):
             output[i-1] = bytes_in[perm_dict_encrypt[i]-1]
-    else:
+    else: #There is no difference between these two....
         for i in range(1,17):
             output[i-1] = bytes_in[perm_dict_decrypt[i]-1]
     return output
@@ -140,7 +144,7 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
 # this will attempt to follow strictly agorithm 3.1 of the textbook
 
 num_of_rounds = 2
-X = BitArray('0x3BBC')
+X = BitArray('0x3BBC') #works for B33C -> F5B2
 K = BitArray('0x8FA507')
 w_list = [BitArray()]*(num_of_rounds+1)
 u_list = [BitArray()]*(num_of_rounds+1)
@@ -162,10 +166,10 @@ for round_number in range(1, num_of_rounds):
 
 # final round which excludes permutation
 u_list[num_of_rounds] = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
-v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds-1], True)
-y = v_list[num_of_rounds] ^ key_array[num_of_rounds]
-
+v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds], True)
+y = v_list[num_of_rounds] ^ key_array[num_of_rounds+1]
 for element in w_list: print(element.bin)
 print(w_list)
+print(u_list)
 print(v_list)
 print(y)
