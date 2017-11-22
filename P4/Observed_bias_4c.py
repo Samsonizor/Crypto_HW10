@@ -108,57 +108,44 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
             output[i-1] = bytes_in[perm_dict_decrypt[i]-1]
     return output
 
-
-num_of_rounds = 4
-uint currInput = 0
-encrypt = True
-
-while currInput < 2**16:
-input = BitArray(unit=currInput, length=16)
-K = BitArray('0x93E026DE') #key 1
-#K = BitArray('0xsE5D7F82E') #key 2
-
-w_list = [BitArray()]*(num_of_rounds+1)
-u_list = [BitArray()]*(num_of_rounds+1)
-v_list = [BitArray()]*(num_of_rounds+1)
-key_array = get_keys(K, num_of_rounds+1)
-# pad the key_array to better fit with the algorithm given
-key_array = [None] + key_array
-
-if encrypt:
-    w_list[0] = input
-    for round_number in range(1, num_of_rounds):
-        # perform a series of regular encryption rounds, including round key XOR, substitution, and permutation
-
-        # XOR step
-        u_list[round_number] = w_list[round_number-1] ^ key_array[round_number]
-        # Substitution step
-        v_list[round_number] = substitute_two_bytes(u_list[round_number], encrypt)
-        # Permutation step
-        w_list[round_number] = permute_two_bytes(v_list[round_number], encrypt)
-
-    # final round which excludes permutation
-    u_list[num_of_rounds] = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
-    v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds], encrypt)
-    output = v_list[num_of_rounds] ^ key_array[num_of_rounds+1]
-else: #decryption
-    w_list[num_of_rounds] = input
-    v_list[num_of_rounds] = w_list[num_of_rounds] ^ key_array[num_of_rounds+1]
-    u_list[num_of_rounds] = substitute_two_bytes(v_list[num_of_rounds], encrypt)
-    w_list[num_of_rounds-1] = u_list[num_of_rounds] ^ key_array[num_of_rounds]
-    for round_number in range(num_of_rounds - 1, 0, -1):
-        # Permutation step
-        v_list[round_number] = permute_two_bytes(w_list[round_number], encrypt)
-        # Substitution step
-        u_list[round_number] = substitute_two_bytes(v_list[round_number], encrypt)
-        # XOR step
-        w_list[round_number - 1] =  u_list[round_number] ^ key_array[round_number]
+for i in range(1, 3):
+    num_of_rounds = 4
+    currInput = 0
+    encrypt = True
+    zeroCount = 0
+    if i == 1:
+        K = BitArray('0x93E026DE') #key 1
+    else:
+        K = BitArray('0xE5D7F82E') #key 2
         
-    output =  w_list[0]
-for element in w_list: print(element.bin)
-print("w_list: {0}, ".format(w_list))
-print("u_list: {0}, ".format(u_list))
-print("v_list: {0}, ".format(v_list))
-print("key array: {0}".format(key_array))
+    while currInput < 2**16:
+        input = BitArray(uint=currInput, length=16)
 
-print(output)
+
+        w_list = [BitArray()]*(num_of_rounds+1)
+        u_list = [BitArray()]*(num_of_rounds+1)
+        v_list = [BitArray()]*(num_of_rounds+1)
+        key_array = get_keys(K, num_of_rounds+1)
+        # pad the key_array to better fit with the algorithm given
+        key_array = [None] + key_array
+
+        w_list[0] = input
+        for round_number in range(1, num_of_rounds):
+            # perform a series of regular encryption rounds, including round key XOR, substitution, and permutation
+
+            # XOR step
+            u_list[round_number] = w_list[round_number-1] ^ key_array[round_number]
+            # Substitution step
+            v_list[round_number] = substitute_two_bytes(u_list[round_number], encrypt)
+            # Permutation step
+            w_list[round_number] = permute_two_bytes(v_list[round_number], encrypt)
+
+        output = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
+        currInput+=1
+        output = output[0] ^ output[8] ^ input[15]
+
+        if not output:
+            zeroCount+=1
+
+    print(zeroCount)
+    print('The observed bias for key {0}  is: {1}'.format(i, (zeroCount / 2**16) - 0.5))
