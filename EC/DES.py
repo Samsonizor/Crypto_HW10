@@ -14,12 +14,27 @@ def flatten_list(list: list):
         lst.append(item)
     return lst
 
+def split_bitarray(tosplit: BitArray, n: int):
+    """
+    split a BitArray into an array of BitArrays, each of length n
+    :param tosplit: BitArray to be split, length MUST NOT be prime
+    :param n: length of sub-arrays to be made, MUST be a factor of len(tosplit)
+    :return: an array of BitArrays of length len(tosplit)/n
+    """
+    if not len(tosplit) % n == 0:
+        raise ValueError('n does not divide the length of tosplit')
+    output = []
+    for i in range(0, int(len(tosplit)/n)):
+        ba_temp = tosplit[i*n:(i+1)*n]
+        output.append(ba_temp)
+    return output
 
-def do_f(R, K):
+def do_f(R, K, debug = False):
     """
     'f' function used in the DES encryption process
     :param R: a 32-bit block of data 
     :param K: a 48-bit block of data (typically a subkey)
+    :param debug: set to true if debugging print statements are needed
     :return: the 32-bit output of f
     """
     # initial checks
@@ -28,7 +43,8 @@ def do_f(R, K):
     if(len(K) != 48):
         raise ValueError('K does not have a length of 48')
     # Expand R
-    R_expanded = do_permutation(R, vals.E)
+    R_expanded = BitArray(flatten_list(do_permutation(R, vals.E)))
+    if debug: print(R_expanded)
 
 
 
