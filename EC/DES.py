@@ -29,11 +29,28 @@ def get_subkeys(seed: BitArray, debug = False):
     :param debug: set to true if debugging print statements are needed
     :return: an array of the 16 subkeys
     """
+    # initialize C and D arrays to all zeros
+    C = [[0]*28]*16
+    D = [[0]*28]*16
+    # C = np.zeros((16, 28))
+    # D = np.zeros((16, 28))
+    # first, get initial values for C and D
     key_permuted = do_permutation(seed, vals.pc_1)
-    C = key_permuted[0:4,:]
-    D = key_permuted[4:,:]
     if debug:
-        print('C value: %s \n\n D value: %s \n\n Permuted key value: %s' % (str(C), str(D), str(key_permuted)))
+        print('Permuted key value: %s'
+              % str(key_permuted))
+    C[0] = key_permuted[0:4,:].flatten()
+    D[0] = key_permuted[4:,:].flatten()
+    if debug:
+        print('C_0 value: %s \n\n D_0 value: %s'
+              % (str(C[0]), str(D[0])))
+    shift_amnts = vals.keygen_shift_table
+    for i in range(1,16):
+        C_prev = BitArray(C[i-1])
+        C[i] = C_prev.rol(shift_amnts[i-1])
+        D_prev = BitArray(D[i - 1])
+        D[i] = D_prev.rol(shift_amnts[i - 1])
+    print('test')
 
 # The below can be used to validate the functionality of get_subkeys as described in
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
@@ -43,3 +60,5 @@ def get_subkeys(seed: BitArray, debug = False):
 # Initialize given values
 x   = BitArray('0b 00100101 01100111 11001101 10110011 11111101 11001110 01111110 00101010')
 K   = BitArray('0b 11100101 01100111 11001101 10110011 11111101 11001110 01111111 00101010')
+
+get_subkeys(K)
