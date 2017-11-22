@@ -14,6 +14,16 @@ def flatten_list(list: list):
         lst.append(item)
     return lst
 
+
+def do_f(R, K):
+    """
+    'f' function used in the DES encryption process
+    :param R: a 32-bit block of data 
+    :param K: a 48-bit block of data (typically a subkey)
+    :return: the 
+    """
+
+
 def do_permutation(data_in: BitArray, permutation_mat: list):
     """
     perform permuation on input data 
