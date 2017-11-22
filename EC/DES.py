@@ -29,7 +29,7 @@ def split_bitarray(tosplit: BitArray, n: int):
         output.append(ba_temp)
     return output
 
-def do_f(R, K, debug = False):
+def do_f(R: BitArray, K: BitArray, debug = False):
     """
     'f' function used in the DES encryption process
     :param R: a 32-bit block of data 
@@ -44,7 +44,34 @@ def do_f(R, K, debug = False):
         raise ValueError('K does not have a length of 48')
     # Expand R
     R_expanded = BitArray(flatten_list(do_permutation(R, vals.E)))
-    if debug: print(R_expanded)
+    if debug: print('E(R): %s' % R_expanded.bin)
+    # XOR E(R) with subkey
+    RK_Sum = R_expanded ^ K
+    if debug: print('E(R) + K: %s' % RK_Sum.bin)
+    # split the sum in to portions of length 6 and perform S-boxes on each
+    RK_Sum_Split =  split_bitarray(RK_Sum, 6)
+    for i in range(0,len(RK_Sum_Split)):
+        box = vals.sbox_array[i]
+        sum_element = RK_Sum_Split[i][:]
+        col = sum_element[1:5].uint
+        del sum_element[1:5]
+        row = sum_element.uint
+        box_result = box[row][col]
+        RK_Sum_Split[i] = BitArray(uint=box_result, length=4)
+    boxed_sum = BitArray()
+    for sum_element in RK_Sum_Split:
+        boxed_sum.append(sum_element)
+    if debug: print('S-Box result: %s' % boxed_sum.bin)
+    # perform the final permutatin
+    output = BitArray(flatten_list(do_permutation(boxed_sum, vals.P)))
+    if debug: print('output of f: %s' % output.bin)
+    return output
+
+# The below can be used to validate the functionality of initial_permutation as described in
+# http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+# R = BitArray('0b 1111 0000 1010 1010 1111 0000 1010 1010')
+# K = BitArray('0b 000110 110000 001011 101111 111111 000111 000001 110010 ')
+# do_f(R, K, debug=True)
 
 
 
