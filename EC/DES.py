@@ -16,7 +16,7 @@ def flatten_list(list: list):
 
 def do_permutation(data_in: BitArray, permutation_mat: list):
     """
-    perform initial permuation on input data (usually the plaintext)
+    perform permuation on input data 
     :param data_in: input data
     :return: 
     """
