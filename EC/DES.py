@@ -1,4 +1,5 @@
 from bitstring import BitArray
+import numpy as np
 import EC.DES_VALS as vals
 import itertools as iter
 
@@ -67,13 +68,11 @@ def do_f(R: BitArray, K: BitArray, debug = False):
     if debug: print('output of f: %s' % output.bin)
     return output
 
-# The below can be used to validate the functionality of initial_permutation as described in
+# The below can be used to validate the functionality of do_f as described in
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
 # R = BitArray('0b 1111 0000 1010 1010 1111 0000 1010 1010')
 # K = BitArray('0b 000110 110000 001011 101111 111111 000111 000001 110010 ')
 # do_f(R, K, debug=True)
-
-
 
 def do_permutation(data_in: BitArray, permutation_mat: list):
     """
@@ -88,7 +87,7 @@ def do_permutation(data_in: BitArray, permutation_mat: list):
         output[row][col] = data_in[index-1]
     return output
 
-# The below can be used to validate the functionality of initial_permutation as described in
+# The below can be used to validate the functionality of do_permutation as described in
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
 # M   = BitArray('0b 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111')
 # for item in do_permutation(M, vals.ip):
@@ -143,6 +142,58 @@ def get_subkeys(seed: BitArray, debug = False):
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
 # K = BitArray('0b 00010011 00110100 01010111 01111001 10011011 10111100 11011111 11110001')
 # get_subkeys(K, debug=True)
+
+def DES_encrypt(plaintext: BitArray, key_seed: BitArray, debug=False):
+    """
+    DES-Encrypt plaintext using the given key
+    :param plaintext: Plaintext to be encrypted - MUST be 64 bits long
+    :param key_seed: Key used to encrypt - MUST be 64 bits long
+    :param debug: set to true if debugging print statements are needed
+    :return: encrypted data of length 64
+    """
+    # initial checks
+    if (len(plaintext) != 64):
+        raise ValueError('plaintext does not have a length of 32')
+    if (len(key_seed) != 64):
+        raise ValueError('key seed does not have a length of 64')
+    # Initalize left and right lists
+    L = [BitArray() for i in range(0, 17)]
+    R = [BitArray() for i in range(0, 17)]
+    keylist = get_subkeys(key_seed, debug=False)
+    if debug:
+        print('\nSubkey values:')
+        for i in range(0, len(keylist)):
+            print('K_%s = %s' % (i, keylist[i].bin))
+    IP_plaintext = [BitArray(element) for element in do_permutation(plaintext, vals.ip)]
+    temp_l = BitArray(flatten_list(IP_plaintext[:4]))
+    temp_r = BitArray(flatten_list(IP_plaintext[4:]))
+    [R[0], L[0]] = [temp_r, temp_l]
+    for i in range(1,17):
+        L[i] = R[i-1]
+        R[i] = L[i-1] ^ do_f(R[i-1], keylist[i])
+    if debug:
+        print('\nL values:')
+        for i in range(0, len(L)):
+            print('L_%s = %s' % (i, L[i].bin))
+        print('\nR values:')
+        for i in range(0, len(R)):
+            print('R_%s = %s' % (i, R[i].bin))
+    # R_fin = np.array(R[16])
+    # L_fin = np.array(L[16])
+    output_pre_permutation = np.concatenate((split_bitarray(R[16], 4), split_bitarray(L[16], 4)), axis=0)
+    output = do_permutation(BitArray(flatten_list(output_pre_permutation.tolist())), vals.ip_inv)
+    if debug:
+        print('Ciphertext before inverse permutation: ')
+        for element in output_pre_permutation:
+            print(BitArray(element).bin)
+    return BitArray(flatten_list(output))
+
+# The below can be used to validate the functionality of DES_encrypt() as described in
+# http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
+# x   = BitArray('0b 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111')
+# K   = BitArray('0b 00010011 00110100 01010111 01111001 10011011 10111100 11011111 11110001')
+# y = DES_encrypt(x, K, debug=True)
+# print('\nCiphertext:' + str(y.hex))
 
 # Initialize given values
 x   = BitArray('0b 00100101 01100111 11001101 10110011 11111101 11001110 01111110 00101010')
