@@ -30,7 +30,7 @@ def do_permutation(data_in: BitArray, permutation_mat: list):
 # The below can be used to validate the functionality of initial_permutation as described in
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
 # M   = BitArray('0b 0000 0001 0010 0011 0100 0101 0110 0111 1000 1001 1010 1011 1100 1101 1110 1111')
-# for item in do_permutation(M, vals.ip_mat):
+# for item in do_permutation(M, vals.ip):
 #     print(BitArray(item).bin)
 
 def get_subkeys(seed: BitArray, debug = False):
