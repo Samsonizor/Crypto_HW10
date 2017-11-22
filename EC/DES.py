@@ -198,3 +198,6 @@ def DES_encrypt(plaintext: BitArray, key_seed: BitArray, debug=False):
 # Initialize given values
 x   = BitArray('0b 00100101 01100111 11001101 10110011 11111101 11001110 01111110 00101010')
 K   = BitArray('0b 11100101 01100111 11001101 10110011 11111101 11001110 01111111 00101010')
+y   = DES_encrypt(x, K)
+print('Ciphertext: %s' % y.hex)
+
