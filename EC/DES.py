@@ -20,8 +20,16 @@ def do_f(R, K):
     'f' function used in the DES encryption process
     :param R: a 32-bit block of data 
     :param K: a 48-bit block of data (typically a subkey)
-    :return: the 
+    :return: the 32-bit output of f
     """
+    # initial checks
+    if(len(R) != 32):
+        raise ValueError('R does not have a length of 32')
+    if(len(K) != 48):
+        raise ValueError('K does not have a length of 48')
+    # Expand R
+    R_expanded = do_permutation(R, vals.E)
+
 
 
 def do_permutation(data_in: BitArray, permutation_mat: list):
