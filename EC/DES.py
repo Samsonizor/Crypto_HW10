@@ -67,6 +67,16 @@ def get_subkeys(seed: BitArray, debug = False):
         print('\nD values:')
         for i in range(0, len(D)):
             print('D_%s = %s' % (i, D[i].bin))
+    # create the subkeys based on the C and D values
+    K = []
+    for i in range(0, 17):
+        k_temp = BitArray(C[i]+D[i])
+        K.append(BitArray(flatten_list(do_permutation(k_temp, vals.pc_2))))
+    if debug:
+        print('\nSubkey values:')
+        for i in range(0, len(K)):
+            print('K_%s = %s' % (i, K[i].bin))
+    return K
 
 # The below can be used to validate the functionality of get_subkeys as described in
 # http://page.math.tu-berlin.de/~kant/teaching/hess/krypto-ws2006/des.htm
@@ -76,6 +86,6 @@ def get_subkeys(seed: BitArray, debug = False):
 # Initialize given values
 x   = BitArray('0b 00100101 01100111 11001101 10110011 11111101 11001110 01111110 00101010')
 K   = BitArray('0b 11100101 01100111 11001101 10110011 11111101 11001110 01111111 00101010')
-K   = BitArray('0b 00010011 00110100 01010111 01111001 10011011 10111100 11011111 11110001')
+# K   = BitArray('0b 00010011 00110100 01010111 01111001 10011011 10111100 11011111 11110001')
 
 get_subkeys(K, debug=True)
