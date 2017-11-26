@@ -1,8 +1,14 @@
 from bitstring import *
 
+# Change s_box dictionary to alter s-box behaviour
+# Change permutation_map to alter the permutation mapping
+# Currently, s_box and permutation_map reflect Stinson 3.2
+# Change the input, key, and rounds (near end of this file) to alter the spn input, spn key, and the number of spn rounds respectively
+# Change verbosity to dictate whether or not spn output is suppressed
+
 # Define dictionaries used for substititutions and pemutations
 # substitution dictionary for encryption
-sub_dict_encrypt = {
+s_box = {
     '0': 'e',
     '1': '4',
     '2': 'd',
@@ -22,10 +28,10 @@ sub_dict_encrypt = {
 }
 
 # substitution dictionary for decryption, an inverse of the disctionary for encryption
-sub_dict_decrypt = {v: k for k, v in sub_dict_encrypt.items()}
+sub_dict_decrypt = {v: k for k, v in s_box.items()}
 
 # permutation dictionary for encryption
-perm_dict_encrypt = {
+permutation_map = {
     1: 1,
     2: 5,
     3: 9,
@@ -45,7 +51,7 @@ perm_dict_encrypt = {
 }
 
 # permutation dictionary for decryption, an inverse of the dictionary for encryption
-perm_dict_decrypt = {v: k for k, v in perm_dict_encrypt.items()}
+perm_dict_decrypt = {v: k for k, v in permutation_map.items()}
 
 def get_keys(master_key: BitArray, num_keys: int):
     """
@@ -71,7 +77,7 @@ def substitute_nibble(nibble_in: BitArray, encrypt: bool):
     if nibble_in.length != 4:
         raise(ValueError('Input nibble is not four bits long.'))
     hex_str = str(nibble_in.hex)
-    if(encrypt): return BitArray('0x' + str(sub_dict_encrypt[hex_str]))
+    if(encrypt): return BitArray('0x' + str(s_box[hex_str]))
     else: return BitArray('0x' + str(sub_dict_decrypt[hex_str]))
 
 
@@ -102,59 +108,61 @@ def permute_two_bytes(bytes_in: BitArray, encrypt: bool):
     output = BitArray('0x0000')
     if encrypt:
         for i in range(1,17):
-            output[i-1] = bytes_in[perm_dict_encrypt[i]-1]
+            output[i-1] = bytes_in[permutation_map[i] - 1]
     else:
         for i in range(1,17):
             output[i-1] = bytes_in[perm_dict_decrypt[i]-1]
     return output
 
 
-num_of_rounds = 2
-input = BitArray('0x1BE9') #works for B33C -> F5B2
-K = BitArray('0x8FA507')
-encrypt = False
+def spn_process(input: BitArray, key :BitArray, num_rounds=2, encrypt=True, verbose=False):
+    w_list = [BitArray()] * (num_rounds + 1)
+    u_list = [BitArray()] * (num_rounds + 1)
+    v_list = [BitArray()] * (num_rounds + 1)
+    key_array = get_keys(key, num_rounds + 1)
+    # pad the key_array to better fit with the algorithm given
+    key_array = [None] + key_array
+    if encrypt:
+        w_list[0] = input
+        for round_number in range(1, num_rounds):
+            # perform a series of regular encryption rounds, including round key XOR, substitution, and permutation
 
-w_list = [BitArray()]*(num_of_rounds+1)
-u_list = [BitArray()]*(num_of_rounds+1)
-v_list = [BitArray()]*(num_of_rounds+1)
-key_array = get_keys(K, num_of_rounds+1)
-# pad the key_array to better fit with the algorithm given
-key_array = [None] + key_array
+            # XOR step
+            u_list[round_number] = w_list[round_number - 1] ^ key_array[round_number]
+            # Substitution step
+            v_list[round_number] = substitute_two_bytes(u_list[round_number], encrypt)
+            # Permutation step
+            w_list[round_number] = permute_two_bytes(v_list[round_number], encrypt)
 
-if encrypt:
-    w_list[0] = input
-    for round_number in range(1, num_of_rounds):
-        # perform a series of regular encryption rounds, including round key XOR, substitution, and permutation
+        # final round which excludes permutation
+        u_list[num_rounds] = w_list[num_rounds - 1] ^ key_array[num_rounds]
+        v_list[num_rounds] = substitute_two_bytes(u_list[num_rounds], encrypt)
+        output = v_list[num_rounds] ^ key_array[num_rounds + 1]
+    else:  # decryption
+        w_list[num_rounds] = input
+        v_list[num_rounds] = w_list[num_rounds] ^ key_array[num_rounds + 1]
+        u_list[num_rounds] = substitute_two_bytes(v_list[num_rounds], encrypt)
+        w_list[num_rounds - 1] = u_list[num_rounds] ^ key_array[num_rounds]
+        for round_number in range(num_rounds - 1, 0, -1):
+            # Permutation step
+            v_list[round_number] = permute_two_bytes(w_list[round_number], encrypt)
+            # Substitution step
+            u_list[round_number] = substitute_two_bytes(v_list[round_number], encrypt)
+            # XOR step
+            w_list[round_number - 1] = u_list[round_number] ^ key_array[round_number]
 
-        # XOR step
-        u_list[round_number] = w_list[round_number-1] ^ key_array[round_number]
-        # Substitution step
-        v_list[round_number] = substitute_two_bytes(u_list[round_number], encrypt)
-        # Permutation step
-        w_list[round_number] = permute_two_bytes(v_list[round_number], encrypt)
+        output = w_list[0]
+    if verbose:
+        print("w_list: {0}, ".format(w_list))
+        print("u_list: {0}, ".format(u_list))
+        print("v_list: {0}, ".format(v_list))
+        print("key array: {0}".format(key_array))
+    return output
 
-    # final round which excludes permutation
-    u_list[num_of_rounds] = w_list[num_of_rounds-1] ^ key_array[num_of_rounds]
-    v_list[num_of_rounds] = substitute_two_bytes(u_list[num_of_rounds], encrypt)
-    output = v_list[num_of_rounds] ^ key_array[num_of_rounds+1]
-else: #decryption
-    w_list[num_of_rounds] = input
-    v_list[num_of_rounds] = w_list[num_of_rounds] ^ key_array[num_of_rounds+1]
-    u_list[num_of_rounds] = substitute_two_bytes(v_list[num_of_rounds], encrypt)
-    w_list[num_of_rounds-1] = u_list[num_of_rounds] ^ key_array[num_of_rounds]
-    for round_number in range(num_of_rounds - 1, 0, -1):
-        # Permutation step
-        v_list[round_number] = permute_two_bytes(w_list[round_number], encrypt)
-        # Substitution step
-        u_list[round_number] = substitute_two_bytes(v_list[round_number], encrypt)
-        # XOR step
-        w_list[round_number - 1] =  u_list[round_number] ^ key_array[round_number]
-        
-    output =  w_list[0]
-for element in w_list: print(element.bin)
-print("w_list: {0}, ".format(w_list))
-print("u_list: {0}, ".format(u_list))
-print("v_list: {0}, ".format(v_list))
-print("key array: {0}".format(key_array))
+input = BitArray('0xF5B2')  # works for B33C -> F5B2
+key = BitArray('0x8FA507')
+rounds = 2
+verbosity = True
 
-print(output)
+output = spn_process(input, key, encrypt=False, verbose=verbosity)
+print('Output: %s' % output)
